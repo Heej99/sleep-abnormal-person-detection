@@ -5,7 +5,7 @@ import torch
 from torch import nn, Tensor
 from torch.nn import functional as F
 from torch.nn.modules import MultiheadAttention, Linear, Dropout, BatchNorm1d, TransformerEncoderLayer
-
+from itertools import combinations
 
 def model_factory(config, data):
     task = config['task']
@@ -60,6 +60,77 @@ def _get_activation_fn(activation):
         return F.gelu
     raise ValueError("activation should be relu/gelu, not {}".format(activation))
 
+
+## SleepEncoding
+
+from itertools import combinations
+
+def calculate_sleep_distances(X):
+    """
+    Args:
+        X: (batch_size, seq_length, feat_dim) torch tensor of input features
+    Returns:
+        distances: (seq_length, batch_size, num_combinations + 1) tensor of distances
+    """
+    batch_size, seq_length, feat_dim = X.shape
+
+    # Pairwise Euclidean distances
+    num_combinations = feat_dim * (feat_dim - 1) // 2
+    pair_distances = torch.zeros((batch_size, seq_length, num_combinations), device=X.device)
+    comb_idx = 0
+    for (f1, f2) in combinations(range(feat_dim), 2):
+        diff = X[:, :, f1] - X[:, :, f2]
+        dist = diff.pow(2)
+        pair_distances[:, :, comb_idx] = dist
+        comb_idx += 1
+
+    # Sum of all distances
+    all_distance = torch.sum(pair_distances, dim=2, keepdim=True)
+
+    # Concatenate pairwise distances and sum of all distances
+    distances = torch.cat((pair_distances, all_distance), dim=-1)
+    distances = torch.sqrt(distances)
+    distances = distances.permute(1, 0, 2)
+    return distances
+
+
+class SleepEncoding(nn.Module):
+
+    def __init__(self, sleep_feat_dim, d_model, dropout=0, max_len=1024):
+        super(SleepEncoding, self).__init__()
+        self.sleep = nn.Parameter(torch.empty(max_len, sleep_feat_dim))   # requires_grad automatically set to True
+        self.d_model = d_model
+        nn.init.uniform_(self.sleep, -0.02, 0.02)
+        self.dropout = nn.Dropout(p=dropout)
+
+    def forward(self, x, sleep_feat):
+        r"""Inputs of forward function
+        Args:
+            x: the sequence after positional encoding
+            sleep_feat: additional feature tensor
+        Shape:
+            x: [sequence length, batch size, d_model]
+            sleep_feat: [sequence length, batch size, feat_dim]
+            output: [sequence length, batch size, d_model]
+        """
+        # Validate dimensions
+        seq_len, batch_size, _ = x.size()
+        assert sleep_feat.size(0) == seq_len and sleep_feat.size(1) == batch_size, \
+            "Sequence length and batch size must match between x and sleep_feat"
+
+        # Compute weighted sum of sleep features
+        # print("ㅎㅎ2:", self.sleep.size(),sleep_feat.size())
+        weighted_sleep_feat = torch.einsum('sf,sbf->sb', self.sleep[:seq_len], sleep_feat)
+        # print("ㅎㅎ2:", weighted_sleep_feat.size())
+
+        # Expand to match the last dimension of x
+        weighted_sleep_feat = weighted_sleep_feat.unsqueeze(-1).expand(-1, -1, self.d_model)
+        print("ㅎㅎ2:", weighted_sleep_feat.size())
+
+        # Add to x and apply dropout
+        x = x + weighted_sleep_feat
+        return self.dropout(x)
+    
 
 # From https://github.com/pytorch/examples/blob/master/word_language_model/model.py
 class FixedPositionalEncoding(nn.Module):
@@ -231,11 +302,26 @@ class TSTransformerEncoder(nn.Module):
             output: (batch_size, seq_length, feat_dim)
         """
 
+        # Original one = 
         # permute because pytorch convention for transformers is [seq_length, batch_size, feat_dim]. padding_masks [batch_size, feat_dim]
-        inp = X.permute(1, 0, 2)
+        inp = X.permute(1, 0, 2) 
         inp = self.project_inp(inp) * math.sqrt(
             self.d_model)  # [seq_length, batch_size, d_model] project input vectors to d_model dimensional space
         inp = self.pos_enc(inp)  # add positional encoding
+
+
+        # Sleep Encoding
+        # create feature
+        #sleep_time = calculate_sleep_time(X) # TODO: 수면시간 와야 함
+        sleep_distances = calculate_sleep_distances(X) # [seq_length, batch_size, sleep_distance_feat = pair_distance + all_distance]
+        sleep_feat = sleep_distances.clone() # TODO: 수면시간이랑 concat되어야 함. 
+        print("확인: ",sleep_feat.size)        
+        sleep_enc = SleepEncoding(sleep_feat.size(-1), self.d_model, dropout=0, max_len=self.max_len)
+
+        # add Sleep encoding
+        inp = sleep_enc(inp,sleep_feat)
+        print(inp.size)
+
         # NOTE: logic for padding masks is reversed to comply with definition in MultiHeadAttention, TransformerEncoderLayer
         output = self.transformer_encoder(inp, src_key_padding_mask=~padding_masks)  # (seq_length, batch_size, d_model)
         output = self.act(output)  # the output transformer encoder/decoder embeddings don't include non-linearity
