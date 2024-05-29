@@ -63,6 +63,7 @@ def main(config):
     #출력 코드
     #my_data.feature_df.to_csv('feature_df.csv')
     print(my_data.all_df)
+    # print(my_data.all_df) (24904,3) <- 전체 데이터 shape
     print(my_data.all_IDs)
     print(my_data.feature_df)
     print(my_data.labels_df)
@@ -112,8 +113,8 @@ def main(config):
             test_indices = []
 
     # 확인용 코드
-    print('train_indices : ', train_indices)
-    print('val_indices : ', val_indices)
+    # print('train_indices : ', train_indices)
+    # print('val_indices : ', val_indices)
 
     logger.info("{} samples may be used for training".format(len(train_indices)))
     logger.info("{} samples will be used for validation".format(len(val_indices)))
@@ -151,6 +152,7 @@ def main(config):
     # Create model
     logger.info("Creating model ...")
     model = model_factory(config, my_data)
+    
 
     if config['freeze']:
         for name, param in model.named_parameters():
@@ -163,7 +165,7 @@ def main(config):
     logger.info("Total number of parameters: {}".format(utils.count_parameters(model)))
     logger.info("Trainable parameters: {}".format(utils.count_parameters(model, trainable=True)))
 
-
+    # print("중간점검: ",model.max_len)
     # Initialize optimizer
 
     if config['global_reg']:
