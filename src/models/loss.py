@@ -66,7 +66,9 @@ class MaskedMSELoss(nn.Module):
         if reduction == 'mean':
             scalar mean loss over batch as a tensor with gradient attached.
         """
-
+        y_true = y_true[:, :, :-1]
+        mask = mask[:, :, :-1]
+                    
         # for this particular loss, one may also elementwise multiply y_pred and y_true with the inverted mask
         masked_pred = torch.masked_select(y_pred, mask)
         masked_true = torch.masked_select(y_true, mask)
