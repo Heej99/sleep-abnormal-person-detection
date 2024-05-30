@@ -8,6 +8,7 @@ from torch.nn.modules import MultiheadAttention, Linear, Dropout, BatchNorm1d, T
 from itertools import combinations
 
 def model_factory(config, data):
+    print("hello")
     task = config['task']
     feat_dim = data.feature_df.shape[1] - 1  # dimensionality of data features
     # data windowing is used when samples don't have a predefined length or the length is too long
