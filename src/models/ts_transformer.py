@@ -93,7 +93,19 @@ def calculate_sleep_distances(X):
     distances = distances.permute(1, 0, 2)
     return distances
 
+def min_max_scale(tensor): # 정규화 (사람, 피처별)
 
+    seq_len, batch_size, num_features = tensor.size()
+    mask = tensor != 0
+
+    feature_mins = torch.where(mask, tensor, torch.tensor(float('inf'))).min(dim=0, keepdim=True).values
+    feature_maxs = torch.where(mask, tensor, torch.tensor(float('-inf'))).max(dim=0, keepdim=True).values
+
+    scaled_tensor = (tensor - feature_mins) / (feature_maxs - feature_mins)
+    scaled_tensor[tensor == 0] = 0  # 0인 값은 그대로 유지
+
+    return scaled_tensor
+    
 class SleepEncoding(nn.Module):
 
     def __init__(self, sleep_feat_dim, d_model, dropout=0, max_len=1024):
@@ -302,9 +314,11 @@ class TSTransformerEncoder(nn.Module):
             output: (batch_size, seq_length, feat_dim)
         """
 
-        # Original one = 
         # permute because pytorch convention for transformers is [seq_length, batch_size, feat_dim]. padding_masks [batch_size, feat_dim]
-        inp = X.permute(1, 0, 2) 
+        inp_t = X.permute(1, 0, 2)
+        inp = inp_t[:, :, :-1]
+        sleep_time = inp_t[:, :, 3]
+        
         inp = self.project_inp(inp) * math.sqrt(
             self.d_model)  # [seq_length, batch_size, d_model] project input vectors to d_model dimensional space
         inp = self.pos_enc(inp)  # add positional encoding
@@ -312,9 +326,11 @@ class TSTransformerEncoder(nn.Module):
 
         # Sleep Encoding
         # create feature
-        #sleep_time = calculate_sleep_time(X) # TODO: 수면시간 와야 함
+        X = X[:,:,:-1]
         sleep_distances = calculate_sleep_distances(X) # [seq_length, batch_size, sleep_distance_feat = pair_distance + all_distance]
-        sleep_feat = sleep_distances.clone() # TODO: 수면시간이랑 concat되어야 함. 
+        sleep_distances = min_max_scale(sleep_distances) # min-max scaling 적용
+        sleep_time = sleep_time.unsqueeze(-1)
+        sleep_feat = torch.cat((sleep_time, sleep_distances), dim=-1)
         print("확인: ",sleep_feat.size)        
         sleep_enc = SleepEncoding(sleep_feat.size(-1), self.d_model, dropout=0, max_len=self.max_len)
 
