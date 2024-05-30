@@ -110,7 +110,7 @@ class SleepEncoding(nn.Module):
 
     def __init__(self, sleep_feat_dim, d_model, dropout=0, max_len=1024):
         super(SleepEncoding, self).__init__()
-        self.sleep = nn.Parameter(torch.empty(max_len, sleep_feat_dim))   # requires_grad automatically set to True
+        self.sleep = nn.Parameter(torch.empty(1, sleep_feat_dim))   # requires_grad automatically set to True
         self.d_model = d_model
         nn.init.uniform_(self.sleep, -0.02, 0.02)
         self.dropout = nn.Dropout(p=dropout)
@@ -130,14 +130,15 @@ class SleepEncoding(nn.Module):
         assert sleep_feat.size(0) == seq_len and sleep_feat.size(1) == batch_size, \
             "Sequence length and batch size must match between x and sleep_feat"
 
+        # Expand self.sleep to match seq_len
+        expanded_sleep = self.sleep.expand(seq_len, -1)
+
         # Compute weighted sum of sleep features
-        # print("ㅎㅎ2:", self.sleep.size(),sleep_feat.size())
-        weighted_sleep_feat = torch.einsum('sf,sbf->sb', self.sleep[:seq_len], sleep_feat)
+        weighted_sleep_feat = torch.einsum('sf,sbf->sb', expanded_sleep, sleep_feat)
         # print("ㅎㅎ2:", weighted_sleep_feat.size())
 
         # Expand to match the last dimension of x
         weighted_sleep_feat = weighted_sleep_feat.unsqueeze(-1).expand(-1, -1, self.d_model)
-        print("ㅎㅎ2:", weighted_sleep_feat.size())
 
         # Add to x and apply dropout
         x = x + weighted_sleep_feat
