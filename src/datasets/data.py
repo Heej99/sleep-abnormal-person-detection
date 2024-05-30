@@ -376,7 +376,7 @@ class OurData(BaseData):
         if len(data_paths) == 0:
             raise Exception('No files found using: {}'.format(os.path.join(root_dir, '*')))
         
-        all_df = pd.read_csv(f'{root_dir}/our_data_train.csv', index_col=0)
+        all_df = pd.read_csv(f'{root_dir}/our_data_train_state_ver.csv', index_col=0)
         if pattern == 'TRAIN':
            labels_df = None
         elif pattern == 'TEST':
