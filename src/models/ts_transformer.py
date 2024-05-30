@@ -8,51 +8,26 @@ from torch.nn.modules import MultiheadAttention, Linear, Dropout, BatchNorm1d, T
 from itertools import combinations
 
 def model_factory(config, data):
-    print("hello")
+
     task = config['task']
-    feat_dim = data.feature_df.shape[1] - 1  # dimensionality of data features
+    feat_dim = data.feature_df.shape[1] - 1  # dimensionality of data features - sleep_time feature(=1) 
     # data windowing is used when samples don't have a predefined length or the length is too long
     max_seq_len = config['data_window_len'] if config['data_window_len'] is not None else config['max_seq_len']
+
     if max_seq_len is None:
         try:
             max_seq_len = data.max_seq_len
         except AttributeError as x:
             print("Data class does not define a maximum sequence length, so it must be defined with the script argument `max_seq_len`")
             raise x
-
-    if (task == "imputation") or (task == "transduction"):
-        if config['model'] == 'LINEAR':
-            return DummyTSTransformerEncoder(feat_dim, max_seq_len, config['d_model'], config['num_heads'],
-                                             config['num_layers'], config['dim_feedforward'], dropout=config['dropout'],
-                                             pos_encoding=config['pos_encoding'], activation=config['activation'],
-                                             norm=config['normalization_layer'], freeze=config['freeze'])
-        elif config['model'] == 'transformer':
-            return TSTransformerEncoder(feat_dim, max_seq_len, config['d_model'], config['num_heads'],
-                                        config['num_layers'], config['dim_feedforward'], dropout=config['dropout'],
-                                        pos_encoding=config['pos_encoding'], activation=config['activation'],
-                                        norm=config['normalization_layer'], freeze=config['freeze'])
-
-    if (task == "classification") or (task == "regression"):
-        num_labels = len(data.class_names) if task == "classification" else data.labels_df.shape[1]  # dimensionality of labels
-        if config['model'] == 'LINEAR':
-            return DummyTSTransformerEncoderClassiregressor(feat_dim, max_seq_len, config['d_model'],
-                                                            config['num_heads'],
-                                                            config['num_layers'], config['dim_feedforward'],
-                                                            num_classes=num_labels,
-                                                            dropout=config['dropout'], pos_encoding=config['pos_encoding'],
-                                                            activation=config['activation'],
-                                                            norm=config['normalization_layer'], freeze=config['freeze'])
-        elif config['model'] == 'transformer':
-            return TSTransformerEncoderClassiregressor(feat_dim, max_seq_len, config['d_model'],
-                                                        config['num_heads'],
-                                                        config['num_layers'], config['dim_feedforward'],
-                                                        num_classes=num_labels,
-                                                        dropout=config['dropout'], pos_encoding=config['pos_encoding'],
-                                                        activation=config['activation'],
-                                                        norm=config['normalization_layer'], freeze=config['freeze'])
+    
+    if (task=="imputation"):
+        return TSTransformerEncoder(feat_dim, max_seq_len, config['d_model'], config['num_heads'],
+                                            config['num_layers'], config['dim_feedforward'], dropout=config['dropout'],
+                                            pos_encoding=config['pos_encoding'], activation=config['activation'],
+                                            norm=config['normalization_layer'], freeze=config['freeze'])
     else:
         raise ValueError("Model class for task '{}' does not exist".format(task))
-
 
 def _get_activation_fn(activation):
     if activation == "relu":
@@ -136,7 +111,6 @@ class SleepEncoding(nn.Module):
 
         # Compute weighted sum of sleep features
         weighted_sleep_feat = torch.einsum('sf,sbf->sb', expanded_sleep, sleep_feat)
-        # print("ㅎㅎ2:", weighted_sleep_feat.size())
 
         # Expand to match the last dimension of x
         weighted_sleep_feat = weighted_sleep_feat.unsqueeze(-1).expand(-1, -1, self.d_model)
@@ -319,8 +293,8 @@ class TSTransformerEncoder(nn.Module):
         # permute because pytorch convention for transformers is [seq_length, batch_size, feat_dim]. padding_masks [batch_size, feat_dim]
         inp_t = X.permute(1, 0, 2)
         inp = inp_t[:, :, :-1]
-        sleep_time = inp_t[:, :, 3]
-        
+        sleep_time = inp_t[:, :, 3] # sleep feat
+         
         inp = self.project_inp(inp) * math.sqrt(
             self.d_model)  # [seq_length, batch_size, d_model] project input vectors to d_model dimensional space
         inp = self.pos_enc(inp)  # add positional encoding
@@ -333,7 +307,6 @@ class TSTransformerEncoder(nn.Module):
         sleep_distances = min_max_scale(sleep_distances) # min-max scaling 적용
         sleep_time = sleep_time.unsqueeze(-1)
         sleep_feat = torch.cat((sleep_time, sleep_distances), dim=-1)
-        print("확인: ",sleep_feat.size)        
         sleep_enc = SleepEncoding(sleep_feat.size(-1), self.d_model, dropout=0, max_len=self.max_len)
 
         # add Sleep encoding
@@ -349,70 +322,3 @@ class TSTransformerEncoder(nn.Module):
         output = self.output_layer(output)  # (batch_size, seq_length, feat_dim)
 
         return output
-
-
-class TSTransformerEncoderClassiregressor(nn.Module):
-    """
-    Simplest classifier/regressor. Can be either regressor or classifier because the output does not include
-    softmax. Concatenates final layer embeddings and uses 0s to ignore padding embeddings in final output layer.
-    """
-
-    def __init__(self, feat_dim, max_len, d_model, n_heads, num_layers, dim_feedforward, num_classes,
-                 dropout=0.1, pos_encoding='fixed', activation='gelu', norm='BatchNorm', freeze=False):
-        super(TSTransformerEncoderClassiregressor, self).__init__()
-
-        self.max_len = max_len
-        self.d_model = d_model
-        self.n_heads = n_heads
-
-        self.project_inp = nn.Linear(feat_dim, d_model)
-        self.pos_enc = get_pos_encoder(pos_encoding)(d_model, dropout=dropout*(1.0 - freeze), max_len=max_len)
-
-        if norm == 'LayerNorm':
-            encoder_layer = TransformerEncoderLayer(d_model, self.n_heads, dim_feedforward, dropout*(1.0 - freeze), activation=activation)
-        else:
-            encoder_layer = TransformerBatchNormEncoderLayer(d_model, self.n_heads, dim_feedforward, dropout*(1.0 - freeze), activation=activation)
-
-        self.transformer_encoder = nn.TransformerEncoder(encoder_layer, num_layers)
-
-        self.act = _get_activation_fn(activation)
-
-        self.dropout1 = nn.Dropout(dropout)
-
-        self.feat_dim = feat_dim
-        self.num_classes = num_classes
-        self.output_layer = self.build_output_module(d_model, max_len, num_classes)
-
-    def build_output_module(self, d_model, max_len, num_classes):
-        output_layer = nn.Linear(d_model * max_len, num_classes)
-        # no softmax (or log softmax), because CrossEntropyLoss does this internally. If probabilities are needed,
-        # add F.log_softmax and use NLLoss
-        return output_layer
-
-    def forward(self, X, padding_masks):
-        """
-        Args:
-            X: (batch_size, seq_length, feat_dim) torch tensor of masked features (input)
-            padding_masks: (batch_size, seq_length) boolean tensor, 1 means keep vector at this position, 0 means padding
-        Returns:
-            output: (batch_size, num_classes)
-        """
-
-        # permute because pytorch convention for transformers is [seq_length, batch_size, feat_dim]. padding_masks [batch_size, feat_dim]
-        inp = X.permute(1, 0, 2)
-        inp = self.project_inp(inp) * math.sqrt(
-            self.d_model)  # [seq_length, batch_size, d_model] project input vectors to d_model dimensional space
-        inp = self.pos_enc(inp)  # add positional encoding
-        # NOTE: logic for padding masks is reversed to comply with definition in MultiHeadAttention, TransformerEncoderLayer
-        output = self.transformer_encoder(inp, src_key_padding_mask=~padding_masks)  # (seq_length, batch_size, d_model)
-        output = self.act(output)  # the output transformer encoder/decoder embeddings don't include non-linearity
-        output = output.permute(1, 0, 2)  # (batch_size, seq_length, d_model)
-        output = self.dropout1(output)
-
-        # Output
-        output = output * padding_masks.unsqueeze(-1)  # zero-out padding embeddings
-        output = output.reshape(output.shape[0], -1)  # (batch_size, seq_length * d_model)
-        output = self.output_layer(output)  # (batch_size, num_classes)
-
-        return output
-

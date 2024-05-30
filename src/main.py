@@ -60,13 +60,14 @@ def main(config):
     logger.info("Loading and preprocessing data ...")
     data_class = data_factory[config['data_class']]
     my_data = data_class(root_dir = config['data_dir'], pattern=config['pattern'], n_proc=config['n_proc'], limit_size=config['limit_size'], config=config)
-    #출력 코드
+    
+    #확인 코드
     #my_data.feature_df.to_csv('feature_df.csv')
-    print(my_data.all_df)
+    # print(my_data.all_df)
     # print(my_data.all_df) (24904,3) <- 전체 데이터 shape
-    print(my_data.all_IDs)
-    print(my_data.feature_df)
-    print(my_data.labels_df)
+    # print(my_data.all_IDs)
+    # print(my_data.feature_df)
+    # print(my_data.labels_df)
     feat_dim = my_data.feature_df.shape[1] - 1  # dimensionality of data features
     if config['task'] == 'classification':
         validation_method = 'StratifiedShuffleSplit'

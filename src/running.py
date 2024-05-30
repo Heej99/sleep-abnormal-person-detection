@@ -19,7 +19,7 @@ import sklearn
 
 from utils import utils, analysis
 from models.loss import l2_reg_loss
-from datasets.dataset import ImputationDataset, TransductionDataset, ClassiregressionDataset, collate_unsuperv, collate_superv
+from datasets.dataset import ImputationDataset, collate_unsuperv, collate_superv
 
 
 logger = logging.getLogger('__main__')
@@ -40,11 +40,6 @@ def pipeline_factory(config):
                        masking_ratio=config['masking_ratio'], mode=config['mask_mode'],
                        distribution=config['mask_distribution'], exclude_feats=config['exclude_feats']),\
                         collate_unsuperv, UnsupervisedRunner
-    if task == "transduction":
-        return partial(TransductionDataset, mask_feats=config['mask_feats'],
-                       start_hint=config['start_hint'], end_hint=config['end_hint']), collate_unsuperv, UnsupervisedRunner
-    if (task == "classification") or (task == "regression"):
-        return ClassiregressionDataset, collate_superv, SupervisedRunner
     else:
         raise NotImplementedError("Task '{}' not implemented".format(task))
 

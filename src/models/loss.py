@@ -7,14 +7,8 @@ def get_loss_module(config):
 
     task = config['task']
 
-    if (task == "imputation") or (task == "transduction"):
+    if (task == "imputation"):
         return MaskedMSELoss(reduction='none')  # outputs loss for each batch element
-
-    if task == "classification":
-        return NoFussCrossEntropyLoss(reduction='none')  # outputs loss for each batch sample
-
-    if task == "regression":
-        return nn.MSELoss(reduction='none')  # outputs loss for each batch sample
 
     else:
         raise ValueError("Loss module for task '{}' does not exist".format(task))
@@ -27,16 +21,6 @@ def l2_reg_loss(model):
         if name == 'output_layer.weight':
             return torch.sum(torch.square(param))
 
-
-class NoFussCrossEntropyLoss(nn.CrossEntropyLoss):
-    """
-    pytorch's CrossEntropyLoss is fussy: 1) needs Long (int64) targets only, and 2) only 1D.
-    This function satisfies these requirements
-    """
-
-    def forward(self, inp, target):
-        return F.cross_entropy(inp, target.long().squeeze(), weight=self.weight,
-                               ignore_index=self.ignore_index, reduction=self.reduction)
 
 
 class MaskedMSELoss(nn.Module):

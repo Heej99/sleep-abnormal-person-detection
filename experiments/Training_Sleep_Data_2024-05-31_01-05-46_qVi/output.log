@@ -1,0 +1,61 @@
+Running:
+src/main.py --output_dir experiments --comment Training_Sleep_Data --name Training_Sleep_Data --records_file Training_Sleep_records.xls --data_dir ./OurData/ --data_class sleep --pattern TRAIN --val_ratio 0.2 --epochs 1 --lr 0.001 --optimizer RAdam --batch_size 32 --pos_encoding learnable --d_model 64
+
+Using device: cpu
+Loading and preprocessing data ...
+371 samples may be used for training
+93 samples will be used for validation
+0 samples will be used for testing
+Creating model ...
+Model:
+TSTransformerEncoder(
+  (project_inp): Linear(in_features=3, out_features=64, bias=True)
+  (pos_enc): LearnablePositionalEncoding(
+    (dropout): Dropout(p=0.1, inplace=False)
+  )
+  (transformer_encoder): TransformerEncoder(
+    (layers): ModuleList(
+      (0-2): 3 x TransformerBatchNormEncoderLayer(
+        (self_attn): MultiheadAttention(
+          (out_proj): NonDynamicallyQuantizableLinear(in_features=64, out_features=64, bias=True)
+        )
+        (linear1): Linear(in_features=64, out_features=256, bias=True)
+        (dropout): Dropout(p=0.1, inplace=False)
+        (linear2): Linear(in_features=256, out_features=64, bias=True)
+        (norm1): BatchNorm1d(64, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+        (norm2): BatchNorm1d(64, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+        (dropout1): Dropout(p=0.1, inplace=False)
+        (dropout2): Dropout(p=0.1, inplace=False)
+      )
+    )
+  )
+  (output_layer): Linear(in_features=64, out_features=3, bias=True)
+  (dropout1): Dropout(p=0.1, inplace=False)
+)
+Total number of parameters: 154051
+Trainable parameters: 154051
+Evaluating on validation set ...
+Validation runtime: 0.0 hours, 0.0 minutes, 0.0987389087677002 seconds
+
+Avg val. time: 0.0 hours, 0.0 minutes, 0.0987389087677002 seconds
+Avg batch val. time: 0.0329129695892334 seconds
+Avg sample val. time: 0.0010617086964268838 seconds
+Epoch 0 Validation Summary: epoch: 0.000000 | loss: 6.984303 | 
+Starting training...
+Epoch 1 Training Summary: epoch: 1.000000 | loss: 1.064633 | 
+Epoch runtime: 0.0 hours, 0.0 minutes, 1.2847707271575928 seconds
+
+Avg epoch train. time: 0.0 hours, 0.0 minutes, 1.2847707271575928 seconds
+Avg batch train. time: 0.10706422726313274 seconds
+Avg sample train. time: 0.0034629938737401425 seconds
+Evaluating on validation set ...
+Validation runtime: 0.0 hours, 0.0 minutes, 0.20824384689331055 seconds
+
+Avg val. time: 0.0 hours, 0.0 minutes, 0.15349137783050537 seconds
+Avg batch val. time: 0.05116379261016846 seconds
+Avg sample val. time: 0.00165044492290866 seconds
+Epoch 1 Validation Summary: epoch: 1.000000 | loss: 1.092213 | 
+Best loss was 1.0922128732356735. Other metrics: OrderedDict([('epoch', 1), ('loss', 1.0922128732356735)])
+All Done!
+Total runtime: 0.0 hours, 0.0 minutes, 2.3832356929779053 seconds
+
