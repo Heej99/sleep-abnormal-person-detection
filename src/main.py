@@ -28,7 +28,7 @@ from torch.utils.tensorboard import SummaryWriter
 from options import Options
 from running import setup, pipeline_factory, validate, check_progress, NEG_METRICS
 from utils import utils
-from datasets.data import data_factory, Normalizer
+from datasets.data import data_factory #, Normalizer
 from datasets.datasplit import split_dataset
 from models.ts_transformer import model_factory
 from models.loss import get_loss_module
@@ -130,25 +130,25 @@ def main(config):
                        'val_indices': list(val_indices),
                        'test_indices': list(test_indices)}, f, indent=4)
 
-    # Pre-process features
-    normalizer = None
-    if config['norm_from']:
-        with open(config['norm_from'], 'rb') as f:
-            norm_dict = pickle.load(f)
-        normalizer = Normalizer(**norm_dict)
-    elif config['normalization'] is not None:
-        normalizer = Normalizer(config['normalization'])
-        my_data.feature_df.loc[train_indices] = normalizer.normalize(my_data.feature_df.loc[train_indices])
-        if not config['normalization'].startswith('per_sample'):
-            # get normalizing values from training set and store for future use
-            norm_dict = normalizer.__dict__
-            with open(os.path.join(config['output_dir'], 'normalization.pickle'), 'wb') as f:
-                pickle.dump(norm_dict, f, pickle.HIGHEST_PROTOCOL)
-    if normalizer is not None:
-        if len(val_indices):
-            val_data.feature_df.loc[val_indices] = normalizer.normalize(val_data.feature_df.loc[val_indices])
-        if len(test_indices):
-            test_data.feature_df.loc[test_indices] = normalizer.normalize(test_data.feature_df.loc[test_indices])
+    # # Pre-process features
+    # normalizer = None
+    # if config['norm_from']:
+    #     with open(config['norm_from'], 'rb') as f:
+    #         norm_dict = pickle.load(f)
+    #     normalizer = Normalizer(**norm_dict)
+    # elif config['normalization'] is not None:
+    #     normalizer = Normalizer(config['normalization'])
+    #     my_data.feature_df.loc[train_indices] = normalizer.normalize(my_data.feature_df.loc[train_indices])
+    #     if not config['normalization'].startswith('per_sample'):
+    #         # get normalizing values from training set and store for future use
+    #         norm_dict = normalizer.__dict__
+    #         with open(os.path.join(config['output_dir'], 'normalization.pickle'), 'wb') as f:
+    #             pickle.dump(norm_dict, f, pickle.HIGHEST_PROTOCOL)
+    # if normalizer is not None:
+    #     if len(val_indices):
+    #         val_data.feature_df.loc[val_indices] = normalizer.normalize(val_data.feature_df.loc[val_indices])
+    #     if len(test_indices):
+    #         test_data.feature_df.loc[test_indices] = normalizer.normalize(test_data.feature_df.loc[test_indices])
     # Create model
     logger.info("Creating model ...")
     model = model_factory(config, my_data)
