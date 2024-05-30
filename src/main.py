@@ -67,7 +67,7 @@ def main(config):
     print(my_data.all_IDs)
     print(my_data.feature_df)
     print(my_data.labels_df)
-    feat_dim = my_data.feature_df.shape[1]  # dimensionality of data features
+    feat_dim = my_data.feature_df.shape[1] - 1  # dimensionality of data features
     if config['task'] == 'classification':
         validation_method = 'StratifiedShuffleSplit'
         labels = my_data.labels_df.values.flatten()
