@@ -9,7 +9,7 @@ from itertools import combinations
 
 def model_factory(config, data):
     task = config['task']
-    feat_dim = data.feature_df.shape[1]  # dimensionality of data features
+    feat_dim = data.feature_df.shape[1] - 1  # dimensionality of data features
     # data windowing is used when samples don't have a predefined length or the length is too long
     max_seq_len = config['data_window_len'] if config['data_window_len'] is not None else config['max_seq_len']
     if max_seq_len is None:
