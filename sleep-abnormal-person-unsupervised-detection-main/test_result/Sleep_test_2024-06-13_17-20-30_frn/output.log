@@ -1,0 +1,40 @@
+Running:
+src/main.py --output_dir test_result --comment test for classification --name Sleep_test --data_dir ./SleepData/ --data_class sleep --pattern TEST --val_ratio 0.2 --test_ratio 0.2 --batch_size 40 --d_model 128 --load_model finetuned/Sleep_finetuned_2024-06-13_17-11-01_Wvv/checkpoints/model_best.pth --task classification --key_metric precision --test_only testset --freeze --pos_encoding learnable --seed 21
+
+Using device: cpu
+Loading and preprocessing data ...
+456 samples may be used for training
+115 samples will be used for validation
+143 samples will be used for testing
+Creating model ...
+Model:
+TSTransformerEncoderClassifier(
+  (project_inp): Linear(in_features=3, out_features=128, bias=True)
+  (pos_enc): LearnablePositionalEncoding(
+    (dropout): Dropout(p=0.0, inplace=False)
+  )
+  (transformer_encoder): TransformerEncoder(
+    (layers): ModuleList(
+      (0-2): 3 x TransformerBatchNormEncoderLayer(
+        (self_attn): MultiheadAttention(
+          (out_proj): NonDynamicallyQuantizableLinear(in_features=128, out_features=128, bias=True)
+        )
+        (linear1): Linear(in_features=128, out_features=256, bias=True)
+        (dropout): Dropout(p=0.0, inplace=False)
+        (linear2): Linear(in_features=256, out_features=128, bias=True)
+        (norm1): BatchNorm1d(128, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+        (norm2): BatchNorm1d(128, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+        (dropout1): Dropout(p=0.0, inplace=False)
+        (dropout2): Dropout(p=0.0, inplace=False)
+      )
+    )
+  )
+  (sleep_enc): SleepEncoding(
+    (dropout): Dropout(p=0, inplace=False)
+  )
+  (dropout1): Dropout(p=0.1, inplace=False)
+  (output_layer): Linear(in_features=7296, out_features=2, bias=True)
+)
+Total number of parameters: 419847
+Trainable parameters: 0
+Test Summary: epoch: 0.000000 | loss: 0.227942 | accuracy: 0.930070 | precision: 0.930070 | AUROC: 0.939806 | AUPRC: 0.837969 | 
