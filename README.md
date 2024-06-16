@@ -1,5 +1,5 @@
 # sleep-abnormal-person-unsupervised-detection
-Introduction 내용 포함해서 수정 부탁해요! 
+Abnormal sleep patterns are often indicative of various diseases, making early detection crucial for timely intervention. The prolif- eration of wearable devices facilitates the continuous collection of physiological data, providing valuable insights into sleep health. This study proposes a novel deep learning model based on the Transformer architecture, specifically designed to detect abnormal sleep patterns using multivariate time series data. By integrating sleep-specific encoding, which incorporates the cyclic nature of sleep and temporal dependencies, our model enhances the detec- tion accuracy of sleep abnormalities. Evaluations conducted on a comprehensive dataset, collected from 714 patients using wearable devices, demonstrate that our model significantly outperforms tra- ditional methods in accuracy, precision, recall, and AUROC. The results underscore the potential of our approach in providing reli- able sleep health insights, thereby aiding in the early diagnosis and management of sleep-related disorders
 
 ## How to run the code from the terminal
 ### 1. Pre-configuration
